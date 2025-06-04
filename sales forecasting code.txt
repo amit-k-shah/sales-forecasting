@@ -1,0 +1,87 @@
+import tkinter as tk
+from tkinter import messagebox, simpledialog
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import pandas as pd
+
+class SalesForecasterApp:
+    def __init__(self, master):
+        self.master = master
+        master.title("?? Sales Forecasting Tool")
+        master.geometry("500x400")
+        master.configure(bg="#f0f0f0")
+
+        self.months = []
+        self.sales = []
+
+        self.title_label = tk.Label(master, text="Sales Forecasting with Linear Regression", font=("Arial", 14, "bold"), bg="#f0f0f0")
+        self.title_label.pack(pady=10)
+
+        self.add_button = tk.Button(master, text="? Add Monthly Sales", command=self.add_sale, bg="#4CAF50", fg="white", font=("Arial", 12))
+        self.add_button.pack(pady=10)
+
+        self.forecast_button = tk.Button(master, text="?? Forecast Sales", command=self.forecast_sales, bg="#2196F3", fg="white", font=("Arial", 12))
+        self.forecast_button.pack(pady=10)
+
+        self.output_text = tk.Text(master, height=10, width=55, font=("Arial", 10))
+        self.output_text.pack(pady=10)
+
+    def add_sale(self):
+        month = len(self.months) + 1
+        try:
+            sale = float(simpledialog.askstring("Input", f"Enter sales for Month {month}:"))
+            self.months.append(month)
+            self.sales.append(sale)
+            messagebox.showinfo("Success", f"Added sales for Month {month}")
+        except (ValueError, TypeError):
+            messagebox.showerror("Error", "Please enter a valid number")
+
+    def forecast_sales(self):
+        if len(self.sales) < 3:
+            messagebox.showwarning("Warning", "Please add at least 3 months of data")
+            return
+
+        try:
+            future_count = int(simpledialog.askstring("Forecast", "Enter number of future months to forecast:"))
+        except (ValueError, TypeError):
+            messagebox.showerror("Error", "Enter a valid number")
+            return
+
+        X = pd.DataFrame({'Month': self.months})
+        y = pd.Series(self.sales)
+
+        model = LinearRegression()
+        model.fit(X, y)
+
+        future_months = list(range(len(self.months) + 1, len(self.months) + future_count + 1))
+        all_months = self.months + future_months
+        all_preds = model.predict(pd.DataFrame({'Month': all_months}))
+        future_preds = all_preds[len(self.months):]
+
+        # Display results
+        self.output_text.delete("1.0", tk.END)
+        self.output_text.insert(tk.END, "?? Forecasted Sales:\n")
+        for m, s in zip(future_months, future_preds):
+            self.output_text.insert(tk.END, f"  Month {m}: ?{s:.2f}\n")
+
+        # Plotting
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.plot(self.months, self.sales, marker='o', label="Actual Sales", color='blue')
+        ax.plot(all_months, all_preds, linestyle='--', color='green', label="Trend Line")
+        ax.plot(future_months, future_preds, marker='o', color='red', label="Forecasted Sales")
+        ax.set_xlabel("Month")
+        ax.set_ylabel("Sales")
+        ax.set_title("Sales Forecast")
+        ax.legend()
+        ax.grid(True)
+
+        # Show plot in Tkinter window
+        canvas = FigureCanvasTkAgg(fig, master=self.master)
+        canvas.draw()
+        canvas.get_tk_widget().pack()
+
+# Run the App
+root = tk.Tk()
+app = SalesForecasterApp(root)
+root.mainloop()
